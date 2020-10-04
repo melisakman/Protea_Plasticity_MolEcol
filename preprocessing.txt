@@ -1,0 +1,29 @@
+## Created by Melis Akman on September 30th 2020
+## This script is an example for initial sample processing including trimming, quality 
+control, mapping and creating read counts and cdhit
+## All these were run on a computing cluster and the shell scripts are not included
+
+## cdhit
+
+cd-hit-est -i ./combined_F2I2_final.fasta -o combined_F2I2_cdhit.fasta -c 0.95 -n 8 -r 1 
+
+## quality control
+
+fastqc /home/makman/ProExp/Rawseq/ALMA4/ALMA4_combined.fastq.gz
+
+## trimmomatic
+
+java -jar trimmomatic-0.33.jar SE ALMA4_combined.fastq ALMA4_combined_trimmed.fastq ILLUMINACLIP:adapters.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+
+## demultiplexing
+
+cat ALMA4_combined_trimmed.fastq | fastx_barcode_splitter.pl --bcfile barcodes_ALMA4.txt --bol --prefix ProExp --suffix .fastq --mismatches 1
+
+## bowtie mapping and express counting
+
+bowtie2-build --offrate 1 /home/makman/ProExp/cdhit/combined_F2I2_cdhit.fasta bowtie_index
+bowtie2 -a -x bowtie_index ProExpp1_d1_A_r_A_34_3.fastq | express --no-bias-correct -o ProExpp1_d1_r_A_34_3 combined_F2I2_cdhit.fasta
+
+cat ProExpp1_d1_r_A_34_3/results.xprs | cut -f2,8 > ProExpp1_d1_r_A_34_3_counts.txt
+sort ProExpp1_d1_r_A_34_3_counts.txt > ProExpp1_d1_r_A_34_3_counts_sorted.txt
+
